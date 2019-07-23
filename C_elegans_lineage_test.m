@@ -10,12 +10,14 @@ rng(123);
 % Number of targets
 targets = 200;
 % Mutation rate per minute
-Lambda = 0.0001;
+Lambda = 0.0002;
 Norm_time = 1.88; % this is a normalising factor to get the real mins
 %NUmber of sims
-Nsims = 10;
+Nsims = 1;
 % the number of states in the analysis. PAUP alows max 64 states.
 states = 30;
+% max_time
+max_time = 3065;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -122,8 +124,9 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
           term_t1=round(eval(strcat(daughters(d),".levelDistance"))/1.88);
           term_t0=round(eval(strcat(daughters(d),".totalDistance"))/1.88);
           term_t0=term_t0 - term_t1;
-          term_t1 = term_t0 + term_t1;
-          %disp(term_id+" no kids; born in "+ term_t0+"-"+term_t1);
+          %term_t1 = term_t0 + term_t1;
+          term_t1 = max_time ;
+          disp(term_id+"born in "+ term_t0+". Muts accum until-"+term_t1);
           %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
           % ----- simulate accumulation of muts (terminal cells)-
           events = zeros(targets,1);
