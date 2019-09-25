@@ -23,12 +23,12 @@ max_time = 3065;
 for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
   %r = 1;
   disp("Rep=" + r);
-  
+
   %%%%%%% CREATE A TABLE WITH THE PROBABILITY OF MUTATION IN EACH TARGET,
   %%%%%%% WHICH WILL FOLLOW A RANDOM GAMMA DISTRIBUTION
   rvs = gamrnd(0.1,2,[1 states]); rvs = rvs/sum(rvs);
   Nmer_prob = sort(rvs);
-  Nmer_prob = cumsum(Nmer_prob);  
+  Nmer_prob = cumsum(Nmer_prob);
   % ---------------------------------------------------------------------
   %the array is a 2D array with the targets (within the cell) as columns and
   % each row is a daughter cell (matrix changes in each iteration)
@@ -37,11 +37,13 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
   A1 = zeros(1,targets); % for the current cell division
   A2 = [];               % to store the cells of the next gen
   A3 = [];               % to store the terminal cells
-  
+
   input = ['./training_set/100_cells_',int2str(r),'_rep.json'];
+  %input = './training_set/100_cells_1_rep.json';
+  %input = './training_set/1000_cells.json';
   C_eleg = jsondecode(fileread(input));
   names = 'did';
-  
+
   % this is the initial node that is goind to be analysed
   node = "C_eleg";
   C_eleg.levelDistance = 0;
@@ -50,11 +52,12 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
   Ndiv = 1;
   daughters = node;
   N = 0;
+  %
   % make a recursive function that traverses the tree cell division by
   % cell division and only stops until there are no more cell daughters
   while found > 0
     f = 0;  % to store the total number of children in a givel cell div
-    disp("    Division=" + Ndiv);
+    %disp("    Division=" + Ndiv);
     Gdaughters = [];
     % -------- FOR EACH OF THE DAUGHTERS
     for d = 1:length(daughters)
@@ -63,39 +66,43 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
       % retrieves the data asociated with the node
       field = fieldnames(eval(daughters(d)))';
       % check if the node has the "children" field
-      x = length(find(strcmp(field,'children')));
+      % x = length(find(strcmp(field,'children')));
+
+      % get the position of the cell
+      pos =  eval(strcat(daughters(d) + ".pos"));
+
       % get the recorder for the cell
       Atemp = A1(d,:);
       % if the node has children  --------------------------------
-      if x == 1
+      if strcmp(pos,'internal') || strcmp(pos,'root')
         f = f+1;
         % get number of children
         n_k = length(eval(daughters(d) + ".children"));
-        disp(daughters(d) + " has " + n_k +  " children" );
+        %disp(daughters(d) + " has " + n_k +  " children" );
         for k = 1:n_k
           %N = N+1;
           % push every child to a new matrix
           if isa(eval(strcat(daughters(d),".children")),'cell')
             Gdx = strcat(daughters(d),".children{"+k+"}");
-            disp(Gdx);
+            %disp(Gdx);
           else
             Gdx = strcat(daughters(d),".children("+k+")");
-            disp(Gdx);
+            %disp(Gdx);
           end
           id = eval(strcat(Gdx, ".did") );
           % check if node has "totalDistance" if not create it
           if isfield(Gdx,'totalDistance') == false
-          totD = eval(strcat(daughters(d),".levelDistance")) ...
+            totD = eval(strcat(daughters(d),".totalDistance")) ...
               + eval(strcat(Gdx,".levelDistance"));
-          eval(strcat(Gdx,".totalDistance = ", num2str(totD)));
-              
+            eval(strcat(Gdx,".totalDistance = ", num2str(totD)));
+
           end
           % ---------
           t1  = round(eval(strcat(Gdx, ".levelDistance"))/1.88);
           t0  = round(eval(strcat(Gdx, ".totalDistance"))/1.88) - t1;
           t1  = t0 + t1;
           %disp(id + " born in " + t0 + "-" + t1 + " mins" );
-          
+
           %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
           % ----- simulate accumulation of muts (internal cells)
           events = zeros(targets,1);
@@ -112,32 +119,32 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
             if Nevents >= size(Aind,2)
               Eind = Aind;
             end
-            
+
             if Nevents < size(Aind,2)
               Eind = randsample(Aind,Nevents);
             end
-            
+
             AR = rand(size(Eind));
             AR = arrayfun(@(z)sum(z <= Nmer_prob), AR);
-            
+
             Atemp(Eind) = AR; %%% MODIFY HEREEE!! Aind should be the ref
           end
           %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
           % ----------------------------------------
           A2 = vertcat(A2,Atemp);
-          
+
           Gdaughters = horzcat(Gdaughters,Gdx);
         end
         % if the node has NO children -----------------------------
       else
         N = N+1;
         term_id = eval(strcat(daughters(d), ".did"));
-        term_t1=round(eval(strcat(daughters(d),".levelDistance"))/1.88);
+        %term_t1=round(eval(strcat(daughters(d),".levelDistance"))/1.88);
         term_t0=round(eval(strcat(daughters(d),".totalDistance"))/1.88);
-        term_t0=term_t0 - term_t1;
+        %term_t0=term_t0 - term_t1;
         %term_t1 = term_t0 + term_t1;
         term_t1 = max_time ;
-        disp(term_id+"born in "+ term_t0+". Muts accum until-"+term_t1);
+        %disp(term_id+"born in "+ term_t0 + ". Muts accum until - "+term_t1);
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % ----- simulate accumulation of muts (terminal cells)-
         events = zeros(targets,1);
@@ -154,19 +161,19 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
           if Nevents >= size(Aind,2)
             Eind = Aind;
           end
-          
+
           if Nevents < size(Aind,2)
             Eind = randsample(Aind,Nevents);
           end
-          
+
           AR = rand(size(Eind));
           AR = arrayfun(@(z)sum(z <= Nmer_prob), AR);
-          
+
           Atemp(Eind) = AR;     %%% MODIFY HEREEE!! Aind should be the ref
         end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         A3 = vertcat(A3,Atemp);
-        
+
         sequences(N).Header = term_id;
         % sequences(N).Sequence = Atemp;
       end
@@ -180,18 +187,18 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
     end
   end
   disp("Total N cells = " + N);
-  
+  %
   % Generate output
   % ------------- IO --------------------------------------------
   % name of the simulation
   sim = [sprintf('%02d',targets),'_targets_'...
     sprintf('%02d',states),'_states_'...
-%    sprintf('%.04f',Lambda),'_Lambda_'...
+    %    sprintf('%.04f',Lambda),'_Lambda_'...
     ];
   A1 = char(zeros(size(A3)));
   %define the output file name for the alignment (fasta)
-  out = ['TRAINSET_',sim, sprintf('%04d', r),'rep','.fas'];
-  freq_file = ['TRAINSET_',sim, sprintf('%04d', r),'rep_freqs','.txt'];
+  out = ['TRAINSET_',sim, sprintf('%04d', r),'rep', '.fas'];
+  freq_file = ['TRAINSET_',sim, sprintf('%04d', r),'rep', '_freqs.txt'];
   %---------- produce the output for each division!!
   %%%% Converts to ASCII characters, including 0-9, A-Z, a-z
   %%%% Avoids troublesome characters as ?, \, etc..
@@ -201,7 +208,7 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
   A1(A3>=27 & A3 <=30) = char(A3(A3>=27 & A3 <=30) + 70);
   %unmutated
   A1(A3==0)= char(A3(A3==0) + 48);
-  
+
   %%%%%% EXPORT THE SIMULATED FREQS TO A FILE %%%%%%%%%%%%
   unqA = unique(A1(1:numel(A1)));
   Nmers = cellstr(unqA');
@@ -209,14 +216,14 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
   relFreq=countNmers/numel(A1);
   %transp(relFreq);
   T = table(Nmers, transpose(relFreq));
-  
+
   % create the file
   writetable(T,['./simulations/',freq_file], ...
     'WriteVariableNames',false);
-  
+
   myfasta = fopen(['./simulations/',out],'w');
   fclose(myfasta);
-  
+
   myfasta = fopen(['./simulations/',out],'a');
   for ii = 1:N
     sequences(ii).Sequence = A1(ii,:);
@@ -224,7 +231,7 @@ for r = 1:Nsims                      % TO HAVE MULTIPLE SAMPLES
   %%%% SORT THE CELLS IN THE OUTPUT SO IT IS EASY TO READ
   % [~,index] = sortrows({sequences.Header}.');
   % sequences = sequences(index); clear index
-  
+
   for ii = 1:N
     % append to a file
     fprintf(myfasta,'%s\t',sequences(ii).Header);

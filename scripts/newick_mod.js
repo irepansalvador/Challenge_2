@@ -86,15 +86,17 @@
         default:
           var x = tokens[i-1];
           if (x == ')' || x == '(' || x == ',') {
-          	if (token == '')
-          		{tree.pos = 'internal'; tree.did = 'root';}
-          	else if (token == 'root')
+          	if (token.match(/(c_)/))
+          		{tree.pos = 'terminal';
+							 tree.did = token
+							 tree.leaf = ++ii;}
+          	else if (token == 'root' || token == 'P0' || token == '')
           		{tree.pos = 'root';
           		tree.leaf = 0;
           		tree.did = token;}
-          	else
+          	else 
           		{tree.did = token;
-          		 tree.pos= 'terminal'; tree.leaf = ++ii; };
+          		 tree.pos= 'internal'};
           } else if (x == ':') {
             tree.levelDistance = parseFloat(token);
           }
